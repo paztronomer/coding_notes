@@ -1,5 +1,12 @@
 # Notes on SQL
-From [Microsoft documentation](https://docs.microsoft.com/en-us/sql/t-sql/functions/functions?view=sql-server-ver16)
+
+## Sources:
+
+* [Microsoft documentation](https://docs.microsoft.com/en-us/sql/t-sql/functions/functions?view=sql-server-ver16)
+
+* My DES work in Data Management
+
+* Stackoverflow
 
 ## Types of Functions
 
@@ -23,7 +30,6 @@ Rowset functions Return an object that can be used like table references in an S
 
 ### 6. Scalar Functions
 Operate on a single value and then return a single value. Scalar functions can be used wherever an expression is valid.
-
 
 ## Examples. Different clauses
 
@@ -68,7 +74,7 @@ SELECT id, archive_path
   -- note the submitted_time belongs to pfw_attempt table
 '''
 
-6. Use of LIKE and DISTINCT
+6. Use of LIKE and DISTINCT. Use IN
 
 '''sql
 -- LIKE
@@ -87,9 +93,14 @@ SELECT d.filename, d.filetype
 SELECT DISTINCT d.filename
   FROM desfile d
   WHERE d.filetype="cal_detflat"
+
+-- IN
+SELECT EmployeeKey, LastName  
+  FROM DimEmployee  
+  WHERE LastName IN ('Smith', 'Godfrey', 'Johnson')
 '''
 
-7. To delete a table
+7. To delete a table. Delete some rows.
 
 '''sql
 -- DELETE and PURGE (seems PURGE isn't needed on MS SQL)
@@ -97,6 +108,13 @@ SELECT DISTINCT d.filename
 DROP TABLE IF EXISTS database_name.schema.table_name;
 
 DROP TABLE table_name;
+'''
+
+'''sql
+-- DELETE acts on rows
+DELETE Production.ProductCostHistory  
+WHERE StandardCost BETWEEN 12.00 AND 14.00  
+      AND EndDate IS NULL;  
 '''
 
 8. Various COUNT, SUBSTR, GROUP BY
@@ -142,7 +160,8 @@ WITH sel_x as (
 11. Create temporary table and INSERT values. If using MS SQL, one could use GO.
 
 '''sql
--- CREATE temporal table, BETWEEN, GROUP BY
+-- CREATE temporal table and immediatly populate it
+-- with the results from a query, BETWEEN, GROUP BY
 CREATE TABLE fco_table AS
 SELECT unitname,reqnum,max(attnum) AS max_reqnum
     FROM pfw_attempt
@@ -150,9 +169,11 @@ SELECT unitname,reqnum,max(attnum) AS max_reqnum
     GROUP BY by unitname, reqnum;
 
 --  using the columns and VALUES vector, to make sure the order is correct
+-- INSERT INTO table_name (columns) VALUES (vector)
 INSERT INTO ops_proctag_def (tag, description)
     VALUES ('Y4A1_Y4E1_PRECAL', 'PRECAL (nightly) runs for Year 4, Epoch 1, for the Y4A1 Processing campaign');
 
+-- INSERT INTO table_name (columns) {SELECT...}
 INSERT INTO proctag (tag, created_date, created_by, pfw_attempt_id)
     SELECT 'Y4A1_Y4E2_SUPERCAL', SYSDATE, 'my_username', a.id
     FROM pfw_attempt a, SUPERCAL_Y4E2 x
@@ -171,7 +192,36 @@ SELECT region
   OR region LIKE 'N_';
 '''
 
-13. Use JOIN
+13. Use JOIN. Remember
+
+'''sql
+-- Why use JOIN? Is a good practice nad helps readability
+-- See the below equivalent 2 examples
+SELECT a.name, b.name
+  FROM a, b
+  WHERE a.id = b.id
+  AND a.id = 1;
+
+SELECT a.name, b.name
+  FROM a INNER JOIN b ON a.id = b.id
+  WHERE a.id = 1;
+
+-- Using aliases whilst joining
+SELECT pv.ProductID, v.BusinessEntityID, v.Name
+  FROM Purchasing.ProductVendor AS pv
+  INNER JOIN Purchasing.Vendor AS v
+      ON (pv.BusinessEntityID = v.BusinessEntityID)
+  WHERE StandardPrice > $10
+      AND Name LIKE N'F%';
+
+-- The same result is obtained with the following
+SELECT pv.ProductID, v.BusinessEntityID, v.Name
+  FROM Purchasing.ProductVendor AS pv, Purchasing.Vendor AS v
+  WHERE pv.BusinessEntityID=v.BusinessEntityID
+      AND StandardPrice > $10
+      AND Name LIKE N'F%';
+'''
+
 
 14. Save query result to table
 
@@ -186,7 +236,41 @@ select att.archive_path, att.reqnum, att.unitname, att.attnum
 select {...}; > y5a1_precal.tab
 '''
 
-15. Use TOP, AVERAGE, etc
+15. Aggregation.
+
+'''sql
+/* AVG ( [ ALL | DISTINCT ] expression )  
+   [ OVER ( [ partition_by_clause ] order_by_clause ) ]
+- ALL is the default, but if using DISTINCT, it only goes through unique instance of each value
+- OVER divides the result of FROM in partitions
+*/
+
+SELECT AVG(VacationHours)AS 'Average vacation hours',   
+    SUM(SickLeaveHours) AS 'Total sick leave hours'  
+FROM HumanResources.Employee  
+WHERE JobTitle LIKE 'Vice President%';  
+
+SELECT TerritoryID, AVG(Bonus)as 'Average bonus', SUM(SalesYTD) as 'YTD sales'  
+FROM Sales.SalesPerson  
+GROUP BY TerritoryID;  
+
+SELECT AVG(DISTINCT ListPrice)  
+FROM Production.Product;  
+
+-- OVER to use partitions
+SELECT BusinessEntityID, TerritoryID   
+   ,DATEPART(yy,ModifiedDate) AS SalesYear  
+   ,CONVERT(VARCHAR(20),SalesYTD,1) AS  SalesYTD  
+   ,CONVERT(VARCHAR(20),AVG(SalesYTD) OVER (PARTITION BY TerritoryID   
+                                            ORDER BY DATEPART(yy,ModifiedDate)   
+                                           ),1) AS MovingAvg  
+   ,CONVERT(VARCHAR(20),SUM(SalesYTD) OVER (PARTITION BY TerritoryID   
+                                            ORDER BY DATEPART(yy,ModifiedDate)   
+                                            ),1) AS CumulativeTotal  
+FROM Sales.SalesPerson  
+WHERE TerritoryID IS NULL OR TerritoryID < 5  
+ORDER BY TerritoryID,SalesYear;  
+'''
 
 16. Use string UPPER and alias
 
@@ -197,15 +281,10 @@ SELECT UPPER(last_name) + ', ' + first_name AS name
   ORDER BY last_name;
 '''
 
-17. Aggregation
+17. Use CAST to convert data types
 
 '''sql
-/* AVG ( [ ALL | DISTINCT ] expression )  
-   [ OVER ( [ partition_by_clause ] order_by_clause ) ]
-- ALL is the default, but if using DISTINCT, it only goes through unique instance of each value
-- OVER divides the result of FROM in partitions
-*/
-HERE ......
+-- CAST
 '''
 
 18. Run SQL script
@@ -214,3 +293,9 @@ HERE ......
 -- in MS SQL  
 sqlcmd script.sql
 '''
+
+19. Additionals: CURSORS, @@ROWCOUNT
+
+20. Atomicity, Consistency, Isolation, Durability
+
+  * transaction: multiple operations, over multiple objects, that must either success or fail as a whole.
