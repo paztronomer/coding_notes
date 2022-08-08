@@ -33,20 +33,18 @@ Operate on a single value and then return a single value. Scalar functions can b
 
 ## Examples. Different clauses
 
+Below list follows no particular order.
+
 1. Comments: -- for one line, /* */ for blocks
 
-2. Nested calls
+2. To compare STR to INT
 
 '''sql
--- Nested calls
-SELECT some_columns
-  FROM file_archive_info
-  WHERE desfile_id IN (
-    SELECT id
-    FROM desfile
-    WHERE pfw_attempt_id=11199
-    AND filetype="processed_bias"
-    );
+-- CONCAT
+SELECT a.id, e.exptime, e.filetype
+  FROM pfw_attempt a, image_info e
+  WHERE a.reqnum=2333
+  AND CONCAT('ID00', a.id)=e.image_id;
 '''
 
 3. To broad view: set linesize 200
@@ -62,7 +60,6 @@ SET linesize 250
 database_name.schema_name.table_name
 '''
 
-
 5. Sort by a column's values
 
 '''sql
@@ -70,7 +67,7 @@ database_name.schema_name.table_name
 SELECT id, archive_path
   FROM pfw_attempt
   WHERE reqnum=1122
-  ORDER BY submitted_time
+  ORDER BY submitted_time;
   -- note the submitted_time belongs to pfw_attempt table
 '''
 
@@ -129,14 +126,18 @@ SELECT COUNT(a.id), SUBSTRING(a.name, 1, 10), SUBSTRING(a.field, 1, 8)
   GROUP BY a.name, a.field;
 '''
 
-9. To compare STR to INT
+9. Nested calls
 
 '''sql
--- CONCAT
-SELECT a.id, e.exptime, e.filetype
-  FROM pfw_attempt a, image_info e
-  WHERE a.reqnum=2333
-  AND CONCAT('ID00', a.id)=e.image_id;
+-- Nested calls
+SELECT some_columns
+  FROM file_archive_info
+  WHERE desfile_id IN (
+    SELECT id
+    FROM desfile
+    WHERE pfw_attempt_id=11199
+    AND filetype="processed_bias"
+    );
 '''
 
 10. Use a subquery
@@ -279,6 +280,13 @@ ORDER BY TerritoryID,SalesYear;
 SELECT UPPER(last_name) + ', ' + first_name AS name
   FROM dball.Customers
   ORDER BY last_name;
+
+SELECT pv.ProductID, v.BusinessEntityID, v.Name
+  FROM Purchasing.ProductVendor AS pv
+  INNER JOIN Purchasing.Vendor AS v
+      ON (pv.BusinessEntityID = v.BusinessEntityID)
+  WHERE StandardPrice > $10
+      AND Name LIKE N'F%';
 '''
 
 17. Use CAST to convert data types
@@ -296,6 +304,68 @@ sqlcmd script.sql
 
 19. Additionals: CURSORS, @@ROWCOUNT
 
-20. Atomicity, Consistency, Isolation, Durability
+20. NTEXT is Unicode, whilst TEXT is non-Unicode.
+
+21. denormalisation
+
+> There are three types of denormalization:
+>
+> * Join rows from different tables, so you don't have to use queries with JOIN.
+> * Perform aggregate calculations like SUM() or COUNT() or MAX() or others, so you don't have to use queries with GROUP BY.
+> * Pre-calculate expensive calculations, so you don't have to use queries with complex expressions in the select-list.
+
+## JOIN in the MS SQL Server
+
+INNER joins can be specified in the FROM and WHERE, whilst OUTER and CROSS can only be specified in the FROM.
+
+'''sql
+FROM table1 <join_type> table2 ON (<condition>)
+'''
+
+The condition (using =, >, or others) is also called the *predicate*. Note that is preferred to call the INNER JOIN in the FROM rather than using equal (=) sign in the WHERE.
+
+When in a JOIN only columns from 1 table are SELECT-ed, that's usually a *anti semi join*. If the data types cannot be implicitly converted, one should use [CAST](https://docs.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver16)
+
+```sql
+SELECT  CAST(10.6496 AS INT) as trunc1,
+        CAST(-10.6496 AS INT) as trunc2,
+        CAST(10.6496 AS NUMERIC) as round1,
+        CAST(-10.6496 AS NUMERIC) as round2;
+```
+
+Note that most subqueries can be rewritten as JOINS and vice-versa. If a join is from a small set of rows, to a large indexed set of rows, then the nested loop has the lowest I/O. Basically, nested for-loops. The Query Optimiser takes the decision of which *flavour* of join to use (nested, hash, etc).
+
+If both columns are large, a merge join is the fastest join. If size differs considerably, a hash join operation is much faster. Merge join is probably the fastest join algorithm, if no sorting is required.
+
+Hash joins can efficiently process non-sorted, large, non-indexed inputs. Useful for intermediate results in complex queries. The hash join allows reductions in the use of denormalisation, allows vertical partitioning (*representing groups of columns from a single table in separate files or indexes*). The hash queries has build input (smaller) and probe input as ingredients (see further in doc)
+
+> Batch mode Adaptive Joins enable the choice of a Hash Join or Nested Loops join method to be deferred until after the first input has been scanned. The Adaptive Join operator defines a threshold that is used to decide when to switch to a Nested Loops plan. A query plan can therefore dynamically switch to a better join strategy during execution without having to be recompiled.
+
+Specific configuration of the DB, as adaptive joins can be enabled/disabled for a specific query, as in
+
+```sql
+SELECT s.CustomerID,
+       s.CustomerName,
+       sc.CustomerCategoryName
+  FROM Sales.Customers AS s
+  LEFT OUTER JOIN Sales.CustomerCategories AS sc
+         ON s.CustomerCategoryID = sc.CustomerCategoryID
+  OPTION (USE HINT('DISABLE_BATCH_MODE_ADAPTIVE_JOINS'));
+```
+
+About NULL values: these aren't matched when doing INNER JOIN. The NULL values from a column to another can be only returned using OUTER JOIN.
+
+### JOIN flavours
+
+LEFT OUTER JOIN returns all the rows of the left column, and rows on the right table are NULL padded, except for when a match is found. Inversely for RIGHT OUTER JOIN. The Venn diagram is very clear to exemplify these two.
+
+FULL OUTER JOIN returns all rows from both left/right tables. When no matching on the left table, it's NULL padded, whilst showing the right table values. Same for the right side.
+
+
+## LIKE, CREATE PROCEDURE, and EXEC
+
+See [doc](https://docs.microsoft.com/en-us/sql/t-sql/language-elements/like-transact-sql?view=sql-server-ver16)
+
+## Atomicity, Consistency, Isolation, Durability
 
   * transaction: multiple operations, over multiple objects, that must either success or fail as a whole.
