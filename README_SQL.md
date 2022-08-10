@@ -8,6 +8,8 @@
 
 * Stackoverflow
 
+* [Dummies.com](https://www.dummies.com/article/technology/programming-web-design/sql/how-to-design-a-sql-database-160840/)
+
 ## Types of Functions
 
 ### 1. Aggregate Functions
@@ -39,41 +41,41 @@ Below list follows no particular order.
 
 2. To compare STR to INT
 
-'''sql
+```sql
 -- CONCAT
 SELECT a.id, e.exptime, e.filetype
   FROM pfw_attempt a, image_info e
   WHERE a.reqnum=2333
   AND CONCAT('ID00', a.id)=e.image_id;
-'''
+```
 
 3. To broad view: set linesize 200
 
-'''sql
+```sql
 -- SET
 SET linesize 250
-'''
+```
 
 4. Different schemas, databases, tables
 
-'''sql
+```sql
 database_name.schema_name.table_name
-'''
+```
 
 5. Sort by a column's values
 
-'''sql
+```sql
 -- ORDER BY
 SELECT id, archive_path
   FROM pfw_attempt
   WHERE reqnum=1122
   ORDER BY submitted_time;
   -- note the submitted_time belongs to pfw_attempt table
-'''
+```
 
 6. Use of LIKE and DISTINCT. Use IN
 
-'''sql
+```sql
 -- LIKE
 SELECT id, name
   FROM pfw_attempt
@@ -95,28 +97,28 @@ SELECT DISTINCT d.filename
 SELECT EmployeeKey, LastName  
   FROM DimEmployee  
   WHERE LastName IN ('Smith', 'Godfrey', 'Johnson')
-'''
+```
 
 7. To delete a table. Delete some rows.
 
-'''sql
+```sql
 -- DELETE and PURGE (seems PURGE isn't needed on MS SQL)
 -- Below doesn't raise an error if TABLE doesn't exists
 DROP TABLE IF EXISTS database_name.schema.table_name;
 
 DROP TABLE table_name;
-'''
+```
 
-'''sql
+```sql
 -- DELETE acts on rows
 DELETE Production.ProductCostHistory  
 WHERE StandardCost BETWEEN 12.00 AND 14.00  
       AND EndDate IS NULL;  
-'''
+```
 
 8. Various COUNT, SUBSTR, GROUP BY
 
-'''sql
+```sql
 -- COUNT, SUBSTRING, GROUP BY
 SELECT COUNT(a.id), SUBSTRING(a.name, 1, 10), SUBSTRING(a.field, 1, 8)
   FROM pfw_attempt a, request r
@@ -124,11 +126,11 @@ SELECT COUNT(a.id), SUBSTRING(a.name, 1, 10), SUBSTRING(a.field, 1, 8)
   AND r.data_state!='BAD'
   AND r.pipeline='latest'
   GROUP BY a.name, a.field;
-'''
+```
 
 9. Nested calls
 
-'''sql
+```sql
 -- Nested calls
 SELECT some_columns
   FROM file_archive_info
@@ -138,11 +140,11 @@ SELECT some_columns
     WHERE pfw_attempt_id=11199
     AND filetype="processed_bias"
     );
-'''
+```
 
 10. Use a subquery
 
-'''sql
+```sql
 -- WITH works when you need a subquery
 -- ROWNUM, WITH, !=
 WITH sel_x as (
@@ -156,11 +158,11 @@ WITH sel_x as (
     WHERE sel_x.pfw_attempt_id=arc.pfw_attempt_id
     AND rownum<200
     AND arc.status!='OLD';
-'''
+```
 
 11. Create temporary table and INSERT values. If using MS SQL, one could use GO.
 
-'''sql
+```sql
 -- CREATE temporal table and immediatly populate it
 -- with the results from a query, BETWEEN, GROUP BY
 CREATE TABLE fco_table AS
@@ -181,21 +183,29 @@ INSERT INTO proctag (tag, created_date, created_by, pfw_attempt_id)
     WHERE a.reqnum=x.reqnum
     AND a.unitname=x.unitname
     AND a.attnum=x.attnum;
-'''
+
+-- Create a table with index, but without constraint
+CREATE TABLE dbo.Employee (
+    EmployeeID INT PRIMARY KEY CLUSTERED,
+    City varchar(255),
+    Region varchar(255),
+    Company varchar(255)
+);
+```
 
 12. Select using wildcard underscore
 
-'''sql
+```sql
 -- will use regions VA, CA, NY, NC
 SELECT region
   FROM All_regions
   WHERE region LIKE '_A'
   OR region LIKE 'N_';
-'''
+```
 
 13. Use JOIN. Remember
 
-'''sql
+```sql
 -- Why use JOIN? Is a good practice nad helps readability
 -- See the below equivalent 2 examples
 SELECT a.name, b.name
@@ -221,12 +231,12 @@ SELECT pv.ProductID, v.BusinessEntityID, v.Name
   WHERE pv.BusinessEntityID=v.BusinessEntityID
       AND StandardPrice > $10
       AND Name LIKE N'F%';
-'''
+```
 
 
 14. Save query result to table
 
-'''sql
+```sql
 spool y5a1_precal.tab
 select att.archive_path, att.reqnum, att.unitname, att.attnum
   from pfw_attempt att, proctag tag
@@ -235,11 +245,11 @@ select att.archive_path, att.reqnum, att.unitname, att.attnum
     order by att.unitname, att.archive_path;
 --or
 select {...}; > y5a1_precal.tab
-'''
+```
 
 15. Aggregation.
 
-'''sql
+```sql
 /* AVG ( [ ALL | DISTINCT ] expression )  
    [ OVER ( [ partition_by_clause ] order_by_clause ) ]
 - ALL is the default, but if using DISTINCT, it only goes through unique instance of each value
@@ -271,11 +281,11 @@ SELECT BusinessEntityID, TerritoryID
 FROM Sales.SalesPerson  
 WHERE TerritoryID IS NULL OR TerritoryID < 5  
 ORDER BY TerritoryID,SalesYear;  
-'''
+```
 
 16. Use string UPPER and alias
 
-'''sql
+```sql
 -- Remember, the alias is the value to be displayed when printing the results
 SELECT UPPER(last_name) + ', ' + first_name AS name
   FROM dball.Customers
@@ -287,20 +297,20 @@ SELECT pv.ProductID, v.BusinessEntityID, v.Name
       ON (pv.BusinessEntityID = v.BusinessEntityID)
   WHERE StandardPrice > $10
       AND Name LIKE N'F%';
-'''
+```
 
 17. Use CAST to convert data types
 
-'''sql
+```sql
 -- CAST
-'''
+```
 
 18. Run SQL script
 
-'''sql
+```sql
 -- in MS SQL  
 sqlcmd script.sql
-'''
+```
 
 19. Additionals: CURSORS, @@ROWCOUNT
 
@@ -318,9 +328,9 @@ sqlcmd script.sql
 
 INNER joins can be specified in the FROM and WHERE, whilst OUTER and CROSS can only be specified in the FROM.
 
-'''sql
+```sql
 FROM table1 <join_type> table2 ON (<condition>)
-'''
+```
 
 The condition (using =, >, or others) is also called the *predicate*. Note that is preferred to call the INNER JOIN in the FROM rather than using equal (=) sign in the WHERE.
 
@@ -360,6 +370,41 @@ About NULL values: these aren't matched when doing INNER JOIN. The NULL values f
 LEFT OUTER JOIN returns all the rows of the left column, and rows on the right table are NULL padded, except for when a match is found. Inversely for RIGHT OUTER JOIN. The Venn diagram is very clear to exemplify these two.
 
 FULL OUTER JOIN returns all rows from both left/right tables. When no matching on the left table, it's NULL padded, whilst showing the right table values. Same for the right side.
+
+## Design
+
+* rows:record, columns:fields
+
+* avoid redundant info
+
+* divide info into subject-based tables
+
+* provide access through joins of tables
+
+* accommodate data processing and reporting needs
+
+Some steps
+
+1. what's the purpose of the DB? who will use it? how will it be used? Write it down.
+
+1. gather all the info to be stored
+
+1. divide into tables, turning info into columns. Avoid storing results of aggregations. Break info down to small logical parts. Major entities translate into tables, each major entity has a set of attributes (columns).
+
+1. specify primary keys: is the column that uniquely identify each row. Must be unique and **always** have a value. Primary key values should not change.
+
+1. setup table relationships. Add fields to tables to clarify relationships. A foreign key is another table's primary keys. Provide basis for primary keys and foreign keys. One-to-many relationships, many-to-many. Many-to-many must be broken down on an intermediate table (*junction table*) so relationships become one-to-many. Therefore, the index on this junction table must be compound of 2 columns, so it will be unique.
+One-to-one relationships could be used for low-usage of certain fields.
+
+1. refine/iterate on your design. POC. Are they redundant columns? or missing? Can you avoid many-to-many relationships? Does all columns belongs to the table?
+
+1. apply the normalisation rules to see if your tables are structured correctly. **First normal form**: each cell (row_i, col_j) can only have 1 value, not a vector. **Second normal form**: each non-key column should be entire dependent on the primary key, not just on a pat of the key, this applies for when your primary key is more than 1 column. **Third normal form**: not only that every non-key column be dependent on the entire primary key, but that non-key columns be independent of each other. Each non-key column should depend on the primary key and only on the primary key.
+
+1. create index and foreign keys. The foreign keys refers to other tables, but should be explicitly declared.
+
+```sql
+SalesPersonID INT NULL REFERENCES SalesPerson(SalesPersonID)
+```
 
 
 ## LIKE, CREATE PROCEDURE, and EXEC
